@@ -1,0 +1,5 @@
+JA TY 0
+TY JA 1
+JA JA 2
+BEN JA 3
+0
