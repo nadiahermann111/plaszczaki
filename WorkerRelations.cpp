@@ -8,6 +8,8 @@
 #include <string>
 #include <unordered_map>
 #include <unordered_set>
+#include <fstream>
+#include <sstream>
 
 bool xnor(bool a, bool b) {
     return (a && b) || (!a && !b);
@@ -16,7 +18,7 @@ bool xnor(bool a, bool b) {
 Worker::Worker(std::string  name, bool isRightHanded) : name(std::move(name)), isRightHanded(isRightHanded) {}
 
 void WorkerRelations::addWorker(const std::string& name, bool isRightHanded) {
-    entryPairs[isRightHanded].emplace(name, std::unordered_set<std::string>{});
+    entryPairs[isRightHanded].emplace(name, std::unordered_set<std::string>{}); //Each worker is placed in the correct map, with an empty unordered_set
 }
 
 void WorkerRelations::addLikes(const std::string &name, const std::vector<std::string> &likes) {
@@ -25,17 +27,52 @@ void WorkerRelations::addLikes(const std::string &name, const std::vector<std::s
         const std::string& like = likes[i];
         bool a = entryPairs[0].find(name) == entryPairs[0].end();
         bool b = entryPairs[0].find(like) == entryPairs[0].end();
-        if(xnor(a, b)) {
+        if(xnor(a, b)) {    //if both workers are in the same map, that means they can't work together and we don't need to process further.
             continue;
         }
 
-        if(entryPairs[b][like].find(name) != entryPairs[b][like].end()) {
+        if(entryPairs[b][like].find(name) != entryPairs[b][like].end()) {   //Worker A likes worker B. So if worker B already likes worker A, then we can instantly add the pair to the final map.
             finalPairs[Worker(name, a)].insert(Worker(like, b));
         }
         else {
-            entryPairs[a][name].insert(like);
+            entryPairs[a][name].insert(like);   //Otherwise, we add the one-sided relation to the entryPairs map.
         }
     }
+}
+
+void WorkerRelations::parseTxt(const std::string &filename) {
+    std::ifstream file(filename);
+    if (!file.is_open()) {
+        std::cerr << "Error opening file: " << filename << std::endl;
+        return;
+    }
+
+    int n;
+    file >> n;
+    for (int i = 0; i < n; ++i) {
+        std::string name;
+        bool isRightHanded;
+        file >> name >> isRightHanded;
+        addWorker(name, isRightHanded);
+    }
+
+    std::string line;
+    while (std::getline(file, line)) {
+        if (line == "0") {
+            break;
+        }
+        std::istringstream iss(line);
+        std::string name;
+        iss >> name;
+        std::vector<std::string> likes;
+        std::string like;
+        while (iss >> like) {
+            likes.push_back(like);
+        }
+        addLikes(name, likes);
+    }
+
+    file.close();
 }
 
 void WorkerRelations::printPairs() {
